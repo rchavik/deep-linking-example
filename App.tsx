@@ -1,25 +1,37 @@
 import React from "react";
 import { View, Text, Button } from "react-native";
-import { NavigationContainer, LinkingOptions, useLinkTo } from "@react-navigation/native";
+import { NavigationContainer, LinkingOptions, useLinkTo, DefaultTheme } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { createDrawerNavigator } from '@react-navigation/drawer';
+import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import * as Linking from "expo-linking";
+import { AlertsProvider } from "react-native-paper-alerts";
+import { Provider } from "react-native-paper";
+import { initialWindowMetrics, SafeAreaProvider } from "react-native-safe-area-context";
 
 const prefix = Linking.makeUrl("/");
 const linking: LinkingOptions = {
   prefixes: [prefix],
   config: {
     screens: {
+      SidebarRight: {
+        path: '',
+      },
       HomeStack: {
-        path: "stack",
-        initialRouteName: "Home",
+        path: '',
+        initialRouteName: 'Home',
         screens: {
-          Home: "home",
+          Home: {
+            path: 'tabs',
+            screens: {
+              TabA: 'tab-a',
+              TabB: 'tab-b',
+            },
+          },
           Profile: {
-            path: "user/:id/:age",
+            path: "user/:id",
             parse: {
               id: id => `there, ${id}`,
-              age: Number,
             },
             stringify: {
               id: id => id.replace("there, ", ""),
@@ -32,29 +44,50 @@ const linking: LinkingOptions = {
   },
 };
 
-function Home({ navigation }) {
-  const linkTo = useLinkTo();
+const LeftDrawer = createDrawerNavigator();
+
+const SidebarLeft = (props: any) => {
   return (
-    <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-      <Button
-        title="Go to Wojciech's profile"
-        onPress={() => linkTo("/stack/user/Wojciech/22")}
-      />
-      <Button
-        title="Go to unknown profile"
-        onPress={() => navigation.navigate("Profile")}
-      />
-    </View>
-  );
+    <LeftDrawer.Navigator
+      drawerPosition='left'
+      drawerContent={(props) => {
+        return (
+          <View>
+            <Text>Left Drawer</Text>
+          </View>
+        )
+      }}
+    >
+      <LeftDrawer.Screen name='SidebarRight' component={ SidebarRight } />
+    </LeftDrawer.Navigator>
+  )
+}
+
+const RightDrawer = createDrawerNavigator();
+
+const SidebarRight = (props: any) => {
+  return (
+    <RightDrawer.Navigator
+      drawerPosition='right'
+      drawerContent={(props) => {
+        return (
+          <View>
+            <Text>Right Drawer</Text>
+
+          </View>
+        )
+      }}
+    >
+      <RightDrawer.Screen name='HomeStack' component={ HomeStack } />
+    </RightDrawer.Navigator>
+  )
 }
 
 function Profile({ route }) {
   return (
     <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-      <Text>Hello {route.params?.id || "Unknown"}!</Text>
       <Text>
-        Type of age parameter is{" "}
-        {route.params?.age ? typeof route.params.age : "undefined"}
+        Profile
       </Text>
     </View>
   );
@@ -68,25 +101,79 @@ function Settings() {
   );
 }
 
-const HomeStack = () => {
+const HomeStack = (props: any) => {
   const MyStack = createStackNavigator();
 
   return (
     <MyStack.Navigator>
-      <MyStack.Screen name="Home" component={Home} />
+      <MyStack.Screen name="Home" component={Tabs} />
       <MyStack.Screen name="Profile" component={Profile} />
+      <MyStack.Screen name="Settings" component={Settings} />
     </MyStack.Navigator>
   );
 };
-const MyTabs = createBottomTabNavigator();
+
+const Buttons = ({navigation}) => {
+  return (
+    <>
+      <Button
+        title="Settings"
+        onPress={() => navigation.navigate('Settings')} 
+      />
+      <Button
+        title="Profile"
+        onPress={() => navigation.navigate("Profile")} 
+      />
+
+      <Button
+        title="Open Left Drawer"
+        onPress={() => navigation.dangerouslyGetParent().dangerouslyGetParent().dangerouslyGetParent().openDrawer() }
+      />
+
+      <Button
+        title="Open Right Drawer"
+        // onPress={() => navigation.navigate('SidebarRight') }
+        onPress={() => navigation.openDrawer() }
+      />
+    </>
+  )
+}
+
+const TabA = ({ navigation }) => {
+  return (
+    <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+      <Text>Tab A</Text>
+      <Buttons navigation={ navigation }/>
+    </View>
+  )
+};
+
+const TabB = () => (
+    <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+      <Text>Tab B</Text>
+    </View>
+)
+
+const MyTabs = createMaterialTopTabNavigator();
+
+const Tabs = () => (
+  <MyTabs.Navigator>
+    <MyTabs.Screen name="TabA" component={ TabA } />
+    <MyTabs.Screen name="TabB" component={ TabB } />
+  </MyTabs.Navigator>
+)
+
 
 export default function App() {
   return (
-    <NavigationContainer linking={linking}>
-      <MyTabs.Navigator>
-        <MyTabs.Screen name="HomeStack" component={HomeStack} />
-        <MyTabs.Screen name="Settings" component={Settings} />
-      </MyTabs.Navigator>
-    </NavigationContainer>
+    <SafeAreaProvider initialMetrics={ initialWindowMetrics }>
+      <Provider>
+        <AlertsProvider>
+          <NavigationContainer linking={ linking }>
+            <SidebarLeft />
+          </NavigationContainer>
+        </AlertsProvider>
+      </Provider>
+    </SafeAreaProvider>
   );
 }
